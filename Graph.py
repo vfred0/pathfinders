@@ -1,6 +1,6 @@
 from Dijkstra import Dijkstra
 from InformedSearch import InformedSearch
-from Node import Node
+from Vertex import Vertex
 from Draw import Draw
 from TypesInformedSearch import TypesInformedSearch
 from UniformCost import UniformCost
@@ -8,75 +8,74 @@ from UniformCost import UniformCost
 
 class Graph:
     def __init__(
-        self,
-        matrix_adjancency: list[int] = [],
-        nodes: list[Node] = [],
-        file_name: str = "graph",
-        show_weight: bool = True,
+        self, vertexs: list[Vertex] = [], adjancency_matrix: list[int] = []
     ) -> None:
-        self.__nodes = nodes
-        self.__matrix_adjancency = matrix_adjancency
-        self.__set_nodes_or_adjancency_matrix()
-        self.__draw = Draw(self.__nodes, show_weight, file_name)
+        self.__vertexs = vertexs
+        self.__adjancency_matrix = adjancency_matrix
+        if not vertexs:
+            self.__set_vertexs_from_adjancency_matrix()
 
-    def __is_directed_adjancency_matrix(self) -> bool:
-        for node in self.__nodes:
-            for next_node in self.__nodes[self.__get_position(node) :]:
-                if node != next_node and next_node.contains(node):
-                    return False
-        return True
+        self.__draw = Draw(self.__vertexs)
 
-    def __set_nodes_or_adjancency_matrix(self) -> None:
+    def __set_vertexs_from_adjancency_matrix(self) -> None:
+        for i in range(len(self.__adjancency_matrix)):
+            self.__vertexs.append(Vertex(f"Vértice{i+1}"))
+        for parent_position, childrens_positions in enumerate(self.__adjancency_matrix):
 
-        if len(self.__matrix_adjancency) == 0:
-            lenght = len(self.__nodes)
-            for i in range(lenght):
-                self.__matrix_adjancency.append([0] * lenght)
-            for parent in self.__nodes:
-                for children, weight in parent.get_childrens():
-                    self.__set_weight(
-                        self.__get_position(parent),
-                        self.__get_position(children),
-                        weight,
+            for children_position, cost in enumerate(childrens_positions):
+                if cost > 0:
+                    self.get_vertex(parent_position).add(
+                        {self.get_vertex(children_position): cost}
                     )
-        else:
-            for i in range(len(self.__matrix_adjancency)):
-                self.__nodes.append(Node(f"Node{i+1}"))
 
-            for parent_position, childrens_positions in enumerate(
-                self.__matrix_adjancency
-            ):
-                childrens = {}
-                for children_position, weight in enumerate(childrens_positions):
-                    if weight > 0:
-                        childrens.update({self.__get_node(children_position): weight})
-                self.__get_node(parent_position).add(childrens)
+    def get_vertex(self, position: int) -> Vertex:
+        return self.__vertexs[position]
 
-    def __get_node(self, node_position: int) -> Node:
-        return self.__nodes[node_position]
+    def get_adjancency_matrix(self) -> list[int]:
+        adjancency_matrix = []
+        lenght = len(self.__vertexs)
+        for i in range(lenght):
+            adjancency_matrix.append([0] * lenght)
+        for parent in self.__vertexs:
+            for children, cost in parent.get_childrens():
+                adjancency_matrix[self.__get_position(parent)][
+                    self.__get_position(children)
+                ] = cost
+        return adjancency_matrix
 
-    def __set_weight(self, parent: int, children: int, weight: int) -> None:
-        self.__matrix_adjancency[parent][children] = weight
-        self.__matrix_adjancency[children][parent] = weight
+    def show_adjancency_matrix(self) -> None:
+        for i, row in enumerate(self.get_adjancency_matrix()):
+            print(f"{self.get_vertex(i)}")
+            for j, cost in enumerate(row):
+                print(f"{self.get_vertex(j)}: {cost}")
 
-    def get_matrix_adjancency(self) -> list:
-        return self.__matrix_adjancency
+        for i in self.get_adjancency_matrix():
+            for j in i:
+                print(f"{j} ", end="")
+            print()
 
-    def get_matrix_adjancency(self) -> list:
-        return self.__matrix_adjancency
-
-    def __get_position(self, search_node: Node) -> int:
-        for index, node in enumerate(self.__nodes):
-            if node == search_node:
+    def __get_position(self, search_vertex: Vertex) -> int:
+        for index, vertex in enumerate(self.__vertexs):
+            if vertex == search_vertex:
                 return index
         return 0
 
-    def show(self) -> None:
-        self.__draw.show_graph(self.__is_directed_adjancency_matrix())
+    def get_vertexs(self) -> list[Vertex]:
+        return self.__vertexs
 
-    def shortest_path(
-        self, types_informed_search: TypesInformedSearch, start: Node, goal: Node
+    def show(self, file_name: str = "graph") -> None:
+        self.__draw.set_file_name(file_name)
+        self.__draw.show_graph()
+
+    def show_shortest_path(
+        self, types_informed_search: TypesInformedSearch, start: Vertex, goal: Vertex
     ):
+
+        print(f"Realizar búsqueda desde {start} a {goal}")
+
+        for i in self.__vertexs:
+            i.reset()
+
         informed_search: InformedSearch = None
         if types_informed_search.is_dijkstra():
             informed_search = Dijkstra(start, goal)
@@ -84,44 +83,122 @@ class Graph:
             informed_search = UniformCost(start, goal)
 
         informed_search.shortest_path()
+        if informed_search.exists_route():
+            self.__draw.show_path_graph(informed_search.get_route())
 
-        self.__draw.show_path_graph(directed=True, nodes=informed_search.get_route())
-
-    def find_shortest_path_with_positions(
-        self, start_node_position: int, end_node_position
+    def shortest_path_with_positions(
+        self,
+        types_informed_search: TypesInformedSearch,
+        start_vertex_position: int,
+        goal_vertex_position: int,
     ):
-        return self.shortest_path(
-            self.__get_node(start_node_position - 1),
-            self.__get_node(end_node_position - 1),
+
+        self.show_shortest_path(
+            types_informed_search,
+            self.get_vertex(start_vertex_position - 1),
+            self.get_vertex(goal_vertex_position - 1),
         )
 
 
-nodeA = Node("A")
-nodeB = Node("B")
-nodeC = Node("C")
-nodeD = Node("D")
-nodeE = Node("E")
-nodeF = Node("F")
-nodeG = Node("G")
+# a = Vertex("A")
+# b = Vertex("B")
+# c = Vertex("C")
+
+# a.add({b: 2, c: 10})
+# b.add({c: 2})
+
+# graph = Graph([a, b, c])
+# graph.show()
+# graph.show_shortest_path(TypesInformedSearch.DIJKSTRA, c, b)
+# graph.show_shortest_path(TypesInformedSearch.DIJKSTRA, c, b)
+# graph.show_shortest_path(TypesInformedSearch.DIJKSTRA, c, b)
+# graph.show_shortest_path(TypesInformedSearch.DIJKSTRA, c, b)
+# graph.show_shortest_path(TypesInformedSearch.UNIFORM_COST, b, c)
 
 
-nodeA.add({nodeB: 168.5, nodeF: 144.63, nodeC: 318.71})
-nodeB.add({nodeC: 198.16, nodeD: 246.56, nodeF: 193.84})
-nodeC.add({nodeD: 142.34, nodeE: 140.04})
-nodeD.add({nodeG: 137.18, nodeF: 155.46})
-nodeE.add({nodeG: 289.11})
+# nodeA = Vertex("A")
+# nodeB = Vertex("B")
+# nodeC = Vertex("C")
+# nodeD = Vertex("D")
+# nodeE = Vertex("E")
+# nodeF = Vertex("F")
+# nodeG = Vertex("G")
+# nodeH = Vertex("H")
+# nodeI = Vertex("I")
+# nodeJ = Vertex("J")
+# nodeK = Vertex("K")
+# nodeL = Vertex("L")
+# nodeM = Vertex("M")
+# nodeN = Vertex("N")
+# nodeO = Vertex("O")
+# nodeP = Vertex("P")
+# nodeQ = Vertex("Q")
+
+# nodeQ.add({nodeA: 1, nodeG: 12}, True)
+# nodeA.add({nodeB: 3, nodeC: 1}, True)
+# nodeB.add({nodeD: 3}, True)
+# nodeC.add({nodeD: 1, nodeG: 2}, True)
+# nodeD.add({nodeG: 3}, True)
 
 
-nodes = [nodeA, nodeB, nodeC, nodeD, nodeE, nodeF, nodeG]
-g = Graph(nodes=nodes, file_name="prueba")
-g.show()
+# nodeA.add({nodeB: 168.5, nodeF: 144.63, nodeC: 318.71})
+# nodeB.add({nodeC: 198.16, nodeD: 246.56, nodeF: 193.84})
+# nodeC.add({nodeD: 142.34, nodeE: 140.04})
+# nodeD.add({nodeG: 137.18, nodeF: 155.46})
+# nodeE.add({nodeG: 289.11})
 
-# print(g.get_matrix_adjancency())
-g.shortest_path(TypesInformedSearch.UNIFORM_COST, nodeA, nodeG)
+# g = Graph([nodeA, nodeB, nodeC, nodeD, nodeE, nodeF, nodeG])
+# g.show()
+# g.show_shortest_path(TypesInformedSearch.DIJKSTRA, nodeG, nodeA)
 
-# g2 = Graph(matrix_adjancency=g.get_matrix_adjancency(), file_name="prueba2")
-# g2.show()
-# print(g2.get_matrix_adjancency())
-# g2.shortest_path(TypesInformedSearch.UNIFORM_COST, nodeA, nodeG)
+# # Ejemplo 2
+# nodeA.add({nodeB: 113})
+# nodeB.add({nodeC: 65, nodeD: 66, nodeE: 49})
+# nodeC.add({nodeI: 55})
+# nodeD.add({nodeI: 97, nodeH: 94})
+# nodeE.add({nodeF: 49})
+# nodeF.add({nodeG: 45})
+# nodeG.add({nodeH: 61, nodeL: 47})
+# nodeH.add({nodeL: 63, nodeK: 49})
+# nodeI.add({nodeJ: 55})
+# nodeJ.add({nodeN: 102, nodeQ: 91})
+# nodeK.add({nodeL: 50, nodeN: 54})
+# nodeL.add({nodeN: 50})
+# nodeM.add({nodeN: 157, nodeO: 210})
+# nodeN.add({nodeP: 44, nodeO: 129})
+# nodeO.add({nodeN: 129})
+# nodeP.add({nodeQ: 68})
 
-# UniformCost(nodeA, nodeG).shortest_path()
+# g = Graph(
+#     [
+#         nodeA,
+#         nodeB,
+#         nodeC,
+#         nodeD,
+#         nodeE,
+#         nodeF,
+#         nodeG,
+#         nodeH,
+#         nodeI,
+#         nodeJ,
+#         nodeK,
+#         nodeL,
+#         nodeM,
+#         nodeN,
+#         nodeO,
+#         nodeP,
+#         nodeQ,
+#     ]
+# )
+# g.show()
+# g.show_shortest_path(TypesInformedSearch.DIJKSTRA, nodeK, nodeA)
+
+
+# Ruta encontrada!!!
+#         > Primero comienza en Q
+#                 >Luego continua hacia P que tiene un costo de 68
+#                 >Luego continua hacia N que tiene un costo de 112
+#                 >Luego continua hacia L que tiene un costo de 162
+#                 >Luego continua hacia G que tiene un costo de 209
+#                 >Luego continua hacia F que tiene un costo de 254
+#         > Y finaliza en E que tiene un costo de 303
