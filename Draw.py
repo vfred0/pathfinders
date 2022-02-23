@@ -1,54 +1,97 @@
 import pygraphviz as pgv
-from Node import Node
+from Vertex import Vertex
 
 
 class Draw:
     def __init__(
         self,
-        nodes: list[Node],
-        show_weight: bool = True,
+        vertexs: list[Vertex],
         file_name: str = "graph",
     ) -> None:
-        self.__name = f"{file_name}.jpg"
-        self.__nodes = nodes
+        self.__file_name = f"{file_name}"
+        self.__vertexs = vertexs
         self.__graph = None
-        self.__show_weight = show_weight
 
-    def show_path_graph(self, directed: bool, nodes: list[Node]):
-        self.__set_graph(directed)
-        for node in nodes:
-            print("rutita")
-            node = self.__graph.get_node(node)
-            node.attr["style"] = "filled"
-            node.attr["color"] = "#40e0d0"
-            node.attr["fontcolor"] = "white"
+    def show_path_graph(self, vertexs: list[Vertex], color: str = "#40e0d0"):
+        self.__set_graph()
+        self.__graph.add_nodes_from(vertexs, style="filled", color=color)
+        position = 0
+        for vertex in vertexs[position:]:
+            position = vertexs.index(vertex)
+            for next_vertex in vertexs[position : position + 2]:
+                if vertex != next_vertex:
+                    number_edge = self.__get_number_edge(vertex, next_vertex)
+                    self.__add_edge(
+                        vertex,
+                        next_vertex,
+                        f"[{number_edge}, {next_vertex.get_cost()}]",
+                        color,
+                    )
 
-        for index, node in enumerate(nodes[:-1]):
-            self.__graph.add_edge(node, nodes[index + 1], color="#40e0d0", penwidth="3")
-        self.__name = f"{self.__name}-path.jpg"
+        if not self.__file_name.__contains__("-path"):
+            self.__file_name = f"{self.__file_name}-path"
         self.__draw()
+
+    def __add_edge(
+        self, vertexA: Vertex, vertexB: Vertex, label: str, color: str
+    ) -> None:
+        if self.__graph.has_edge(vertexA, vertexB):
+            self.__graph.remove_edge(vertexA, vertexB)
+        self.__graph.add_edge(
+            vertexA,
+            vertexB,
+            color=color,
+            penwidth="3",
+            fontcolor=color,
+            label=label,
+        )
+
+    def __get_number_edge(self, vertexA: Vertex, vertexB: Vertex) -> str:
+
+        # try:
+        #     edge = self.__graph.get_edge(vertexA, vertexB)
+        # except KeyError:
+        #     return None
+
+        edge = self.__graph.get_edge(vertexA, vertexB)
+        if edge:
+            return str(edge.attr["label"].split(",")[0]).replace("[", "")
+        return None
 
     def __draw(self) -> None:
         # neato, dot, twopi, circo, fdp, nop, gc, acyclic, gvpr, gvcolor, ccomps, sccmap, tred, sfdp, unflatten
-        self.__graph.draw(self.__name, prog="dot")
+        self.__graph.draw(f"{self.__file_name}.png", prog="dot")
 
-    def show_graph(self, directed: bool):
-        self.__set_graph(directed)
+    def show_graph(self):
+        self.__set_graph()
         self.__draw()
 
-    def __set_graph(self, directed: bool):  # cambiar esto
-        self.__graph = pgv.AGraph(directed=directed)
-        for parent in self.__nodes:
-            self.__graph.add_node(parent)
-        edge = 1
-        for parent in self.__nodes:
-            for children, weight in parent.get_childrens():
-                label = (
-                    f"[A{edge}, {str(weight)}]" if self.__show_weight else f"A{edge}"
+    def set_file_name(self, file_name: str = "graph") -> None:
+        self.__file_name = f"{file_name}"
+
+    def __set_graph(self):
+        self.__graph = pgv.AGraph(ranksep="0.1", strict=False, directed=True)
+        self.__graph.add_nodes_from(self.__vertexs)
+        edge = 0
+        for parent in self.__vertexs:
+            for children, cost in parent.get_childrens():
+                self.__graph.add_edge(
+                    parent, children, label=self.__get_label(edge + 1, cost)
                 )
-                self.__graph.add_edge(parent, children, label=label)
                 edge += 1
 
+    def __get_label(self, edge: int, cost: int) -> str:
+        return f"[A{edge}, {cost}]"
 
-# for i, x in enumerate([1, 2, 4, 5]):
-#     print(i, x)
+
+# l = [1, 2, 3, 4, 5, 6, 7]
+# p = 0
+# for i in l[p:]:
+# for j in l[p : p + 2]:
+#     p += 1
+#     print(p)
+
+
+# print(l[:2])
+# print(l[1:3])
+# print(l[2:4])
