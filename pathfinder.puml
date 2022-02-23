@@ -1,0 +1,54 @@
+@startuml "PathFinder"
+
+class Menu{
+
+}
+
+class PathFinder {
+
+}
+
+class VertexManagementMenu {
+
+}
+
+class SearchPathMenu {
+
+}
+
+class Console {
+
+}
+
+class InformedSearch {}
+class Dijkstra {}
+class UniformCost {}
+class Graph{}
+class Draw{}
+class Vertex{}
+
+
+PathFinder *--> Menu
+PathFinder --> Graph
+Graph ..> InformedSearch
+Graph --> Vertex
+Graph *-> Draw
+Draw --> Vertex
+InformedSearch ..> Vertex
+InformedSearch ..> Console
+VertexManagementMenu ..> Vertex
+SearchPathMenu ..> Vertex
+InformedSearch <|-- Dijkstra
+InformedSearch <|-- UniformCost
+Dijkstra ..> Vertex
+UniformCost ..> Vertex
+
+
+Menu <|-- VertexManagementMenu
+Menu <|-- SearchPathMenu
+Menu ..> Console
+VertexManagementMenu ..> Console
+SearchPathMenu ..> Console
+
+Draw --> PyGraphviz
+@enduml
